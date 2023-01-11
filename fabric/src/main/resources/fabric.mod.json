@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "dyeblecompasses",
+  "version": "${version}",
+  "name": "Dyeable Compasses",
+  "description": "Allows you to dye compasses",
+  "authors": [
+    "Lemons"
+  ],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "party.lemons.dyeablecompasses.DyeableCompassesFabric"
+    ],
+    "client": [
+      "party.lemons.dyeablecompasses.DyeableCompassesClientFabric"
+    ]
+  },
+  "mixins": [
+    "dyeablecompasses-common.mixins.json"
+  ],
+  "depends": {
+    "fabric": "*",
+    "minecraft": ">=1.19.2",
+    "architectury": ">=6.2.43"
+  }
+}

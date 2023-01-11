@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "party.lemons.dyeablecompasses.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+  ],
+  "mixins": [
+    "CompassItemMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
