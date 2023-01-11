@@ -23,7 +23,7 @@ side = "BOTH"
 [[dependencies.dyeablecompasses]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.19.2,)"
+versionRange = "[1.19.3,)"
 ordering = "NONE"
 side = "BOTH"
 

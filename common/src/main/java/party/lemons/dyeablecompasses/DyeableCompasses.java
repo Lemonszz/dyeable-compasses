@@ -4,15 +4,12 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
-import dev.architectury.registry.client.rendering.ColorHandlerRegistry;
-import dev.architectury.registry.item.ItemPropertiesRegistry;
 import dev.architectury.registry.registries.DeferredRegister;
-import dev.architectury.registry.registries.Registries;
 import dev.architectury.registry.registries.RegistrySupplier;
-import net.minecraft.client.renderer.item.CompassItemPropertyFunction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.cauldron.CauldronInteraction;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtUtils;
@@ -22,37 +19,28 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.item.crafting.CustomRecipe;
-import net.minecraft.world.item.crafting.RecipeSerializer;
-import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.item.crafting.SimpleRecipeSerializer;
+import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LayeredCauldronBlock;
-import net.minecraft.world.level.block.state.BlockState;
 import org.slf4j.Logger;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.function.Supplier;
 
 public class DyeableCompasses {
     public static final String MOD_ID = "dyeablecompasses";
 
-    public static final Supplier<Registries> REGISTRIES = Suppliers.memoize(() -> Registries.get(MOD_ID));
-
-    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(MOD_ID, Registry.ITEM_REGISTRY);
-    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(MOD_ID, Registry.RECIPE_SERIALIZER_REGISTRY);
-    public static final DeferredRegister<RecipeType<?>> RECIPES = DeferredRegister.create(MOD_ID, Registry.RECIPE_TYPE_REGISTRY);
+    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(MOD_ID, Registries.ITEM);
+    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(MOD_ID, Registries.RECIPE_SERIALIZER);
+    public static final DeferredRegister<RecipeType<?>> RECIPES = DeferredRegister.create(MOD_ID, Registries.RECIPE_TYPE);
 
     public static final RegistrySupplier<Item> DYED_COMPASS = ITEMS.register("dyed_compass", () -> new DyeableCompass(new Item.Properties()));
-    public static final RegistrySupplier<RecipeSerializer<DyeRecipe>> DYE = RECIPE_SERIALIZERS.register(new ResourceLocation(MOD_ID, "compass_dye"), ()->new SimpleRecipeSerializer<>(DyeRecipe::new));
+    public static final RegistrySupplier<RecipeSerializer<DyeRecipe>> DYE = RECIPE_SERIALIZERS.register(new ResourceLocation(MOD_ID, "compass_dye"), ()->new SimpleCraftingRecipeSerializer<>(DyeRecipe::new));
     public static final RegistrySupplier<RecipeType<DyeRecipe>> DYE_RECIPE = RECIPES.register(new ResourceLocation(MOD_ID, "compass_dye"), ()->new RecipeType<>() {
         public String toString() {
             return MOD_ID + ":compass_dye";
@@ -243,8 +231,10 @@ public class DyeableCompasses {
 
     public static class DyeRecipe extends CustomRecipe
     {
-        public DyeRecipe(ResourceLocation arg) {
-            super(arg);
+
+        public DyeRecipe(ResourceLocation resourceLocation, CraftingBookCategory craftingBookCategory)
+        {
+            super(resourceLocation, craftingBookCategory);
         }
 
         public boolean matches(CraftingContainer arg, Level arg2) {
