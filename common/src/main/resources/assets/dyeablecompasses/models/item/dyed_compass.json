@@ -2,7 +2,8 @@
     "parent": "item/generated",
     "textures": {
         "layer0": "dyeablecompasses:item/compass_base",
-        "layer1": "dyeablecompasses:item/compass_16"
+        "layer1": "dyeablecompasses:item/compass_back_16",
+        "layer2": "dyeablecompasses:item/compass_16"
     },
     "overrides": [
         { "predicate": { "angle": 0.000000 }, "model": "dyeablecompasses:item/dyed_compass" },

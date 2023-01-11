@@ -14,6 +14,6 @@ public class DyeableCompassesClient
 				CompassItem.isLodestoneCompass(arg2) ? CompassItem.getLodestonePosition(arg2.getOrCreateTag()) : CompassItem.getSpawnPosition(arg))));
 
 
-		ColorHandlerRegistry.registerItemColors((argx, i) -> i <= 0 ? -1 : ((DyeableCompasses.Dyeable)argx.getItem()).getColor(argx), DyeableCompasses.DYED_COMPASS);
+		ColorHandlerRegistry.registerItemColors((argx, i) -> i <= 1 ? -1 : ((DyeableCompasses.Dyeable)argx.getItem()).getColor(argx), DyeableCompasses.DYED_COMPASS);
 	}
 }

@@ -2,6 +2,7 @@
   "parent": "minecraft:item/generated",
   "textures": {
     "layer0": "dyeablecompasses:item/compass_base",
-    "layer1": "dyeablecompasses:item/compass_15"
+    "layer1": "dyeablecompasses:item/compass_back_15",
+    "layer2": "dyeablecompasses:item/compass_15"
   }
 }
