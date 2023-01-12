@@ -1,12 +1,9 @@
 package party.lemons.dyeablecompasses;
 
-import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.gson.JsonElement;
-import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
-import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
 import dev.architectury.event.events.common.CommandRegistrationEvent;
 import dev.architectury.platform.Platform;
@@ -15,15 +12,11 @@ import dev.architectury.registry.registries.RegistrySupplier;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.cauldron.CauldronInteraction;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.data.DataGenerator;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -34,7 +27,10 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.CraftingContainer;
 import net.minecraft.world.item.*;
 import net.minecraft.world.item.context.UseOnContext;
-import net.minecraft.world.item.crafting.*;
+import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SimpleRecipeSerializer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LayeredCauldronBlock;
@@ -46,22 +42,22 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
 
 public class DyeableCompasses {
     public static final String MOD_ID = "dyeablecompasses";
 
-    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(MOD_ID, Registries.ITEM);
-    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(MOD_ID, Registries.RECIPE_SERIALIZER);
-    public static final DeferredRegister<RecipeType<?>> RECIPES = DeferredRegister.create(MOD_ID, Registries.RECIPE_TYPE);
+    public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(MOD_ID, Registry.ITEM_REGISTRY);
+    public static final DeferredRegister<RecipeSerializer<?>> RECIPE_SERIALIZERS = DeferredRegister.create(MOD_ID, Registry.RECIPE_SERIALIZER_REGISTRY);
+    public static final DeferredRegister<RecipeType<?>> RECIPES = DeferredRegister.create(MOD_ID, Registry.RECIPE_TYPE_REGISTRY);
 
     public static final RegistrySupplier<Item> DYED_COMPASS = ITEMS.register("dyed_compass", () -> new DyeableCompass(new Item.Properties()));
-    public static final RegistrySupplier<RecipeSerializer<DyeRecipe>> DYE = RECIPE_SERIALIZERS.register(new ResourceLocation(MOD_ID, "compass_dye"), ()->new SimpleCraftingRecipeSerializer<>(DyeRecipe::new));
+    public static final RegistrySupplier<RecipeSerializer<DyeRecipe>> DYE = RECIPE_SERIALIZERS.register(new ResourceLocation(MOD_ID, "compass_dye"), ()->new SimpleRecipeSerializer<>(DyeRecipe::new));
     public static final RegistrySupplier<RecipeType<DyeRecipe>> DYE_RECIPE = RECIPES.register(new ResourceLocation(MOD_ID, "compass_dye"), ()->new RecipeType<>() {
         public String toString() {
             return MOD_ID + ":compass_dye";
         }
     });
+
 
     public static void init() {
         ITEMS.register();
@@ -94,23 +90,32 @@ public class DyeableCompasses {
 
         CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> {
             dispatcher.register(Commands.literal("exdata").executes(c->{
-                Registry<ConfiguredFeature<?, ?>> cfg =  c.getSource().getLevel().registryAccess().registry(Registries.CONFIGURED_FEATURE).get();
-                Registry<PlacedFeature> placed =  c.getSource().getLevel().registryAccess().registry(Registries.PLACED_FEATURE).get();
+                Registry<ConfiguredFeature<?, ?>> cfg =  c.getSource().getLevel().registryAccess().registry(Registry.CONFIGURED_FEATURE_REGISTRY).get();
+                Registry<PlacedFeature> placed =  c.getSource().getLevel().registryAccess().registry(Registry.PLACED_FEATURE_REGISTRY).get();
+
 
                cfg.forEach(f->{
                    ResourceLocation location = cfg.getKey(f);
-                    var json = ConfiguredFeature.DIRECT_CODEC.encodeStart(JsonOps.INSTANCE, f).get().left().get();
-                   var file = Platform.getConfigFolder().resolve("data")
-                           .resolve(location.getNamespace())
-                           .resolve("configured_features")
-                           .resolve(location.getPath() + ".json");
-                    writeDirect(file, json);
+                    var json = ConfiguredFeature.DIRECT_CODEC.encodeStart(JsonOps.INSTANCE, f).mapError(s-> {
+                        System.out.println(location + " : " + s);
+                        return s;
+                    });
+                    if(json.result().isPresent()) {
 
+                        var file = Platform.getConfigFolder().resolve("data")
+                                .resolve(location.getNamespace())
+                                .resolve("configured_features")
+                                .resolve(location.getPath() + ".json");
+                        writeDirect(file, json.result().get());
+                    }
                 });
 
                 placed.forEach(f->{
                     ResourceLocation location = placed.getKey(f);
-                    var json = PlacedFeature.DIRECT_CODEC.encodeStart(JsonOps.INSTANCE, f).get().left().get();
+                    var json = PlacedFeature.DIRECT_CODEC.encodeStart(JsonOps.INSTANCE, f).mapError(s-> {
+                        System.out.println(s);
+                        return s;
+                    }).result().orElseThrow();
                     var file = Platform.getConfigFolder().resolve("data")
                             .resolve(location.getNamespace())
                             .resolve("placed_features")
@@ -296,10 +301,8 @@ public class DyeableCompasses {
 
     public static class DyeRecipe extends CustomRecipe
     {
-
-        public DyeRecipe(ResourceLocation resourceLocation, CraftingBookCategory craftingBookCategory)
-        {
-            super(resourceLocation, craftingBookCategory);
+        public DyeRecipe(ResourceLocation arg) {
+            super(arg);
         }
 
         public boolean matches(CraftingContainer arg, Level arg2) {
