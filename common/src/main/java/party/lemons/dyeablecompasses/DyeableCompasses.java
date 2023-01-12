@@ -2,18 +2,28 @@ package party.lemons.dyeablecompasses;
 
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
+import com.google.gson.JsonElement;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.DataResult;
+import com.mojang.serialization.DynamicOps;
+import com.mojang.serialization.JsonOps;
+import dev.architectury.event.events.common.CommandRegistrationEvent;
+import dev.architectury.platform.Platform;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
+import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.cauldron.CauldronInteraction;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.data.DataGenerator;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -28,9 +38,15 @@ import net.minecraft.world.item.crafting.*;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LayeredCauldronBlock;
+import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import org.slf4j.Logger;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 
 public class DyeableCompasses {
     public static final String MOD_ID = "dyeablecompasses";
@@ -75,6 +91,55 @@ public class DyeableCompasses {
                 }
             });
         });
+
+        CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> {
+            dispatcher.register(Commands.literal("exdata").executes(c->{
+                Registry<ConfiguredFeature<?, ?>> cfg =  c.getSource().getLevel().registryAccess().registry(Registries.CONFIGURED_FEATURE).get();
+                Registry<PlacedFeature> placed =  c.getSource().getLevel().registryAccess().registry(Registries.PLACED_FEATURE).get();
+
+               cfg.forEach(f->{
+                   ResourceLocation location = cfg.getKey(f);
+                    var json = ConfiguredFeature.DIRECT_CODEC.encodeStart(JsonOps.INSTANCE, f).get().left().get();
+                   var file = Platform.getConfigFolder().resolve("data")
+                           .resolve(location.getNamespace())
+                           .resolve("configured_features")
+                           .resolve(location.getPath() + ".json");
+                    writeDirect(file, json);
+
+                });
+
+                placed.forEach(f->{
+                    ResourceLocation location = placed.getKey(f);
+                    var json = PlacedFeature.DIRECT_CODEC.encodeStart(JsonOps.INSTANCE, f).get().left().get();
+                    var file = Platform.getConfigFolder().resolve("data")
+                            .resolve(location.getNamespace())
+                            .resolve("placed_features")
+                            .resolve(location.getPath() + ".json");
+                    writeDirect(file, json);
+
+                });
+
+                return 1;
+            }));
+        });
+    }
+
+    protected static void writeDirect(Path path, JsonElement json) {
+        var parent = path.getParent();
+        if (!Files.exists(parent)) {
+            try {
+                Files.createDirectories(parent);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+
+        try (var out = Files.newBufferedWriter(path)) {
+            out.write(json.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static class DyeableCompass extends CompassItem implements Dyeable
